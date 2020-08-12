@@ -139,75 +139,62 @@ def joint_probability(people, one_gene, two_genes, have_trait):
         * everyone in set `have_trait` has the trait, and
         * everyone not in set` have_trait` does not have the trait.
     """
-    chances = dict()
+    multiplicacao = 1
 
     for eachPerson in people:
-        if eachPerson["father"] is None:
-            qtdGenes = 0
-            if eachPerson["name"] in one_gene:
-                qtdGenes = 1
-            elif eachPerson["name"] in two_genes:
-                qtdGenes = 2
+        probGene = 0
+        probTrait = 0
 
-            temTraco = (eachPerson["name"] in have_trait)
+        qtdGenes = 0
+        if eachPerson in one_gene:
+            qtdGenes = 1
+        elif eachPerson in two_genes:
+            qtdGenes = 2
+        temTraco = (True if (eachPerson in have_trait) else False)
 
-            chances[eachPerson["name"]] = calculaChanceSemPai(qtdGenes, temTraco)
+        if people[eachPerson]["father"] in people and people[eachPerson]["mother"] in people:
+            qtdGenesPai = 0
+            qtdGenesMae = 0
 
-        else:
-            father = eachPerson["father"]
-            mother = eachPerson["mother"]
-            f = []
-            m = []
-            possibleGenes = [0, 0, 0]
-            f.append(1 if (father in one_gene or father in two_genes) else 0)
-            f.append(1 if (father in two_genes) else 0)
-            m.append(1 if (mother in one_gene or mother in two_genes) else 0)
-            m.append(1 if (mother in two_genes) else 0)
+            motherGive = 1
+            fatherGive = 1
 
-            for genef in f:
-                for genem in m:
-                    possibleGenes[genef + genem] += 1
+            if people[eachPerson]["father"] in one_gene:
+                qtdGenesPai = 1
+            elif people[eachPerson]["father"] in two_genes:
+                qtdGenesPai = 2
+            if people[eachPerson]["mother"] in one_gene:
+                qtdGenesMae = 1
+            elif people[eachPerson]["mother"] in two_genes:
+                qtdGenesMae = 2
 
-            chanceZero = possibleGenes[0]/4
-            chanceOne = possibleGenes[1]/4
-            chanceTwo = possibleGenes[2]/4
-
-            if eachPerson in one_gene:
-                chance0 = chanceZero * (PROBS["mutation"]) * (1-PROBS["mutation"])
-                chance1 = chanceOne * (1-PROBS["mutation"]) * (1-PROBS["mutation"])
-                chance2 = chanceTwo * (PROBS["mutation"]) * (1-PROBS["mutation"])
-                somatorio = chance2 + chance1 + chance0
-                if eachPerson in have_trait:
-                    chances[eachPerson["name"]] = somatorio * PROBS["trait"][1][True]
-                else:
-                    chances[eachPerson["name"]] = somatorio * PROBS["trait"][1][False]
-
-            elif eachPerson in two_genes:
-                chance0 = chanceZero * (PROBS["mutation"]) * (PROBS["mutation"])
-                chance1 = chanceOne * (PROBS["mutation"]) * (1 - PROBS["mutation"])
-                chance2 = chanceTwo * (1 - PROBS["mutation"]) * (1 - PROBS["mutation"])
-                somatorio = chance2 + chance1 + chance0
-                if eachPerson in have_trait:
-                    chances[eachPerson["name"]] = somatorio * PROBS["trait"][2][True]
-                else:
-                    chances[eachPerson["name"]] = somatorio * PROBS["trait"][2][False]
-
+            if qtdGenesPai == 0:
+                fatherGive = PROBS["mutation"]
+            elif qtdGenesPai == 1:
+                fatherGive = .5
             else:
-                chance0 = chanceZero * (1-PROBS["mutation"]) * (1-PROBS["mutation"])
-                chance1 = chanceOne * (PROBS["mutation"]) * (1 - PROBS["mutation"])
-                chance2 = chanceTwo * (PROBS["mutation"]) * (PROBS["mutation"])
-                somatorio = chance2 + chance1 + chance0
-                if eachPerson in have_trait:
-                    chances[eachPerson["name"]] = somatorio * PROBS["trait"][0][True]
-                else:
-                    chances[eachPerson["name"]] = somatorio * PROBS["trait"][0][False]
+                fatherGive = 1-PROBS["mutation"]
 
-        
+            if qtdGenesMae == 0:
+                motherGive = PROBS["mutation"]
+            elif qtdGenesMae == 1:
+                motherGive = .5
+            else:
+                motherGive = 1-PROBS["mutation"]
 
 
+            if qtdGenes == 0:
+                probGene = (1-fatherGive)*(1-motherGive)
+            elif qtdGenes == 1:
+                probGene = (fatherGive)*(1-motherGive) + (motherGive)*(1-fatherGive)
+            else:
+                probGene = (fatherGive)*(motherGive)
+        else:
+            probGene = PROBS["gene"][qtdGenes]
 
-
-    raise NotImplementedError
+        probTrait = PROBS["trait"][qtdGenes][temTraco]
+        multiplicacao *= (probGene*probTrait)
+    return multiplicacao
 
 
 def update(probabilities, one_gene, two_genes, have_trait, p):
@@ -217,7 +204,26 @@ def update(probabilities, one_gene, two_genes, have_trait, p):
     Which value for each distribution is updated depends on whether
     the person is in `have_gene` and `have_trait`, respectively.
     """
-    raise NotImplementedError
+
+    for person in probabilities:
+        if person in one_gene:
+            probabilities[person]["gene"][1] = p
+            if person in have_trait:
+                probabilities[person]["trait"][True] = p
+            else:
+                probabilities[person]["trait"][False] = p
+        elif person in two_genes:
+            probabilities[person]["gene"][2] = p
+            if person in have_trait:
+                probabilities[person]["trait"][True] = p
+            else:
+                probabilities[person]["trait"][False] = p
+        else:
+            probabilities[person]["gene"][0] = p
+            if person in have_trait:
+                probabilities[person]["trait"][True] = p
+            else:
+                probabilities[person]["trait"][False] = p
 
 
 def normalize(probabilities):
@@ -225,14 +231,29 @@ def normalize(probabilities):
     Update `probabilities` such that each probability distribution
     is normalized (i.e., sums to 1, with relative proportions the same).
     """
-    raise NotImplementedError
 
-        
-def calculaChanceSemPai(qtdGenes, have_trait):
-    chance = PROBS["gene"][qtdGenes]
-    chance *= PROBS["trait"][qtdGenes][have_trait]
-    return chance
+    for person in probabilities:
+        traitValues = []
+        traitValues.append(probabilities[person]["trait"][False])
+        traitValues.append(probabilities[person]["trait"][True])
+        factorTrait = determineFactor(traitValues, 1)
+        probabilities[person]["trait"][False] *= factorTrait
+        probabilities[person]["trait"][True] *= factorTrait
 
+        geneValues = []
+        geneValues.append(probabilities[person]["gene"][0])
+        geneValues.append(probabilities[person]["gene"][1])
+        geneValues.append(probabilities[person]["gene"][2])
+        factorGene = determineFactor(geneValues, 1)
+        probabilities[person]["gene"][0] *= factorGene
+        probabilities[person]["gene"][1] *= factorGene
+        probabilities[person]["gene"][2] *= factorGene
+
+def determineFactor(values, soma):
+    somatorio = 0
+    for value in values:
+        somatorio += value
+    return soma/somatorio
 
 
 if __name__ == "__main__":
