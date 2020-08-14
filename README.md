@@ -12,4 +12,4 @@ data/familyX.csv é o diretorio onde se encontra os arquivos com a população.
 
 ## Projeto original
 
-Projeto 0 do Curso: [CS50’s Introduction to Artificial Intelligence with Python](https://cs50.harvard.edu/ai/2020/weeks/0/)
+Projeto 0 do Curso: [CS50’s Introduction to Artificial Intelligence with Python](https://cs50.harvard.edu/ai/2020/weeks/2/)
